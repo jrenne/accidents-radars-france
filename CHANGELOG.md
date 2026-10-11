@@ -7,6 +7,10 @@
   l'archive 2018.
 - Publication des exports CSV compressés et de la base relationnelle SQLite.
 - Ajout des licences, des métadonnées de provenance et des contrôles qualité.
+- Ajout d'un schéma exhaustif, d'un vérificateur autonome et d'une validation
+  continue du paquet.
+- Stabilisation binaire des exports compressés et contrôle préalable des
+  empreintes des sources avant toute reconstruction.
 
 ## 0.1.0 - 2026-10-11
 

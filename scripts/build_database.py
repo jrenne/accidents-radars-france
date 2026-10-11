@@ -12,6 +12,7 @@ from __future__ import annotations
 import csv
 import gzip
 import hashlib
+import io
 import math
 import re
 import sqlite3
@@ -31,6 +32,7 @@ TEACHING_DIR = PACKAGE_DIR / "data" / "teaching"
 METADATA_DIR = PACKAGE_DIR / "metadata"
 DB_PATH = OUTPUT_DIR / "accidents_radars_france_2005_2025.sqlite"
 YEARS = range(2005, 2025)
+VERSION = "1.0.0"
 
 MISSING_TEXT = {"", "NA", "N/A", "NULL", "NONE", "."}
 WS_RE = re.compile(r"[\s\u00a0\u202f]+")
@@ -113,6 +115,45 @@ def open_dict_reader(path):
 
 def baac_path(kind, year):
     return RAW_BAAC_DIR / f"{kind}_{year}.csv"
+
+
+def required_source_files():
+    files = [
+        baac_path(kind, year)
+        for year in YEARS
+        for kind in ("caracteristiques", "lieux", "vehicules", "usagers")
+    ]
+    return files + [LEGACY_RADAR_FILE, CURRENT_RADAR_FILE]
+
+
+def validate_sources():
+    """Fail before overwriting outputs when a source is missing or altered."""
+    missing = [path for path in required_source_files() if not path.is_file()]
+    if missing:
+        details = "\n".join(f"  - {path.relative_to(PACKAGE_DIR)}" for path in missing)
+        raise SystemExit(
+            "Sources manquantes. Placez les fichiers bruts aux emplacements "
+            f"documentés avant de reconstruire la base :\n{details}"
+        )
+
+    manifest_path = METADATA_DIR / "fichiers_sources_sha256.csv"
+    if not manifest_path.is_file():
+        raise SystemExit(f"Manifeste des sources absent : {manifest_path}")
+    with manifest_path.open("r", encoding="utf-8-sig", newline="") as stream:
+        expected = {
+            PACKAGE_DIR / row["fichier"]: row["sha256"]
+            for row in csv.DictReader(stream)
+        }
+    mismatches = []
+    for path in required_source_files():
+        if expected.get(path) != file_sha256(path):
+            mismatches.append(path.relative_to(PACKAGE_DIR))
+    if mismatches:
+        details = "\n".join(f"  - {path}" for path in mismatches)
+        raise SystemExit(
+            "L'empreinte de certaines sources diffère du manifeste :\n"
+            f"{details}\nMettez à jour les sources et leur manifeste de façon explicite."
+        )
 
 
 def normalize_year(value, fallback):
@@ -587,10 +628,19 @@ def add_indexes_and_views(conn):
     """)
 
 
+def deterministic_gzip_text_writer(path):
+    """Open a UTF-8 gzip writer with stable headers across operating systems."""
+    raw = path.open("wb")
+    compressed = gzip.GzipFile(
+        filename="", fileobj=raw, mode="wb", compresslevel=6, mtime=0
+    )
+    return io.TextIOWrapper(compressed, encoding="utf-8", newline="")
+
+
 def write_csv_gz(conn, query, path):
     cursor = conn.execute(query)
-    with gzip.open(path, "wt", encoding="utf-8", newline="", compresslevel=6) as stream:
-        writer = csv.writer(stream)
+    with deterministic_gzip_text_writer(path) as stream:
+        writer = csv.writer(stream, lineterminator="\n")
         writer.writerow([d[0] for d in cursor.description])
         while True:
             rows = cursor.fetchmany(20000)
@@ -611,8 +661,8 @@ def export_teaching_extract(conn, per_year=2000):
         "categorie_route", "vitesse_maximale_autorisee_kmh", "nombre_vehicules",
         "nombre_lieux", "nombre_usagers", "nombre_tues", "nombre_blesses_hospitalises", "nombre_blesses_legers",
     ]
-    with gzip.open(output, "wt", encoding="utf-8", newline="", compresslevel=6) as stream:
-        writer = csv.writer(stream)
+    with deterministic_gzip_text_writer(output) as stream:
+        writer = csv.writer(stream, lineterminator="\n")
         writer.writerow(fields)
         for year in YEARS:
             rows = list(conn.execute(
@@ -657,9 +707,26 @@ def write_quality_report(conn):
         ("radars_apparies_dates_differentes", conn.execute("SELECT COUNT(*) FROM radars WHERE observe_2018=1 AND actif_liste_2025=1 AND date_mise_en_service<>date_installation_2018").fetchone()[0], "information"),
     ])
     with (METADATA_DIR / "rapport_qualite.csv").open("w", encoding="utf-8", newline="") as stream:
-        writer = csv.writer(stream)
+        writer = csv.writer(stream, lineterminator="\n")
         writer.writerow(["controle", "valeur", "interpretation"])
         writer.writerows(checks)
+
+
+def write_schema_dictionary(conn):
+    rows = []
+    objects = conn.execute(
+        "SELECT name, type FROM sqlite_master "
+        "WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY type, name"
+    )
+    for object_name, object_type in objects:
+        for _, column, sql_type, not_null, _, primary_key in conn.execute(
+            f'PRAGMA table_info("{object_name}")'
+        ):
+            rows.append((object_name, object_type, column, sql_type, not_null, primary_key))
+    with (METADATA_DIR / "schema.csv").open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.writer(stream, lineterminator="\n")
+        writer.writerow(["objet", "type_objet", "colonne", "type_sql", "non_nul", "cle_primaire"])
+        writer.writerows(rows)
 
 
 def sha256_manifest():
@@ -668,7 +735,10 @@ def sha256_manifest():
         if path.is_file()
         and path.name != "sha256.txt"
         and "__pycache__" not in path.parts
+        and ".git" not in path.parts
+        and "release" not in path.parts
         and not (PACKAGE_DIR / "data" / "raw") in path.parents
+        and path != DB_PATH
         and not path.name.endswith((".sqlite-wal", ".sqlite-shm"))
     )
     with (METADATA_DIR / "sha256.txt").open("w", encoding="utf-8") as stream:
@@ -700,12 +770,13 @@ def write_raw_source_manifest():
     for source_id, path in (("radars_2018", LEGACY_RADAR_FILE), ("radars_2025", CURRENT_RADAR_FILE)):
         rows.append((source_id, "", "radars", str(path.relative_to(PACKAGE_DIR)), path.stat().st_size, file_sha256(path)))
     with (METADATA_DIR / "fichiers_sources_sha256.csv").open("w", encoding="utf-8", newline="") as stream:
-        writer = csv.writer(stream)
+        writer = csv.writer(stream, lineterminator="\n")
         writer.writerow(["source_id", "annee", "table", "fichier", "octets", "sha256"])
         writer.writerows(rows)
 
 
 def main():
+    validate_sources()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     TEACHING_DIR.mkdir(parents=True, exist_ok=True)
     METADATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -721,7 +792,7 @@ def main():
             load_radars(conn)
             add_sources(conn)
             conn.executemany("INSERT INTO construction VALUES (?,?)", [
-                ("version", "0.1.0"),
+                ("version", VERSION),
                 ("date_construction_utc", datetime.now(timezone.utc).replace(microsecond=0).isoformat()),
                 ("python", sys.version.split()[0]),
                 ("annees_baac", "2005-2024"),
@@ -733,6 +804,7 @@ def main():
         conn.commit()
         export_outputs(conn)
         write_quality_report(conn)
+        write_schema_dictionary(conn)
         conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         conn.execute("PRAGMA journal_mode=DELETE")
     finally:

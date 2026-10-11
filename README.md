@@ -1,6 +1,7 @@
 # Accidents corporels et radars fixes en France
 
 Base relationnelle harmonisée destinée à la recherche et à l'enseignement.
+La version courante est **1.0.0**.
 
 ## Contenu
 
@@ -25,7 +26,9 @@ La base ne reproduit pas les choix empiriques du mémoire présent dans le dossi
 | `data/teaching/accidents_extrait_pedagogique.csv.gz` | Échantillon reproductible, au plus 2 000 accidents par année |
 | `metadata/rapport_qualite.csv` | Contrôles d'intégrité et effectifs |
 | `metadata/fichiers_sources_sha256.csv` | Inventaire et empreintes des fichiers bruts |
-| `metadata/sha256.txt` | Empreintes des livrables |
+| `metadata/schema.csv` | Schéma exhaustif des tables et des vues |
+| `metadata/variables.csv` | Dictionnaire commenté des variables principales |
+| `metadata/sha256.txt` | Empreintes des fichiers versionnés dans le dépôt |
 
 ## Schéma relationnel
 
@@ -35,19 +38,78 @@ La vue SQLite `bilan_accidents` fournit une ligne par accident avec le nombre de
 
 ## Construire la base
 
+### Prérequis
+
+- Python 3.9 ou une version ultérieure ;
+- environ 3 Go d'espace libre pendant la construction ;
+- les fichiers BAAC bruts décrits ci-dessous.
+
+Le constructeur n'utilise aucun paquet Python externe.
+
+### Préparer les sources
+
+Télécharger les fichiers BAAC depuis la [page officielle de
+data.gouv.fr](https://www.data.gouv.fr/datasets/bases-de-donnees-annuelles-des-accidents-corporels-de-la-circulation-routiere-annees-de-2005-a-2024).
+Pour chaque année de 2005 à 2024, placer les quatre tables dans
+`data/raw/baac` en appliquant exactement les noms suivants :
+
+```text
+data/raw/baac/
+├── caracteristiques_AAAA.csv
+├── lieux_AAAA.csv
+├── vehicules_AAAA.csv
+└── usagers_AAAA.csv
+```
+
+Les noms sont normalisés, y compris pour les sources de 2021 qui utilisent
+initialement des traits d'union et une orthographe différente. Les fichiers
+radar 2018 et 2025 nécessaires à la construction sont déjà fournis dans
+`data/raw/radars`.
+
+Les fichiers BAAC bruts, volumineux et déjà diffusés par leur producteur, ne
+sont pas versionnés dans ce dépôt. Leur taille et leur empreinte attendue sont
+consignées dans `metadata/fichiers_sources_sha256.csv`.
+
+### Lancer la construction
+
 Depuis la racine du dépôt :
 
 ```bash
 python3 scripts/build_database.py
 ```
 
-Le script n'utilise que la bibliothèque standard de Python. Pour reconstruire
-la base, télécharger les quatre tables BAAC de chaque millésime et les placer
-dans `data/raw/baac`, selon la convention
-`caracteristiques_AAAA.csv`, `lieux_AAAA.csv`, `vehicules_AAAA.csv` et
-`usagers_AAAA.csv`. Les fichiers bruts, volumineux et déjà diffusés par leurs
-producteurs, ne sont pas versionnés dans ce dépôt. Leurs empreintes sont
-conservées dans `metadata/fichiers_sources_sha256.csv`.
+Avant de remplacer un livrable existant, le script vérifie la présence et
+l'empreinte SHA-256 des 82 fichiers sources. Il exécute ensuite, dans cet ordre :
+
+1. l'harmonisation des quatre tables BAAC ;
+2. le chargement et le rapprochement géographique des radars 2018 et 2025 ;
+3. la création des index et des vues SQLite ;
+4. l'export des CSV compressés et de l'extrait pédagogique ;
+5. les contrôles qualité, le schéma exhaustif et les manifestes d'empreintes.
+
+Les CSV compressés sont produits avec des en-têtes gzip déterministes et des
+fins de ligne normalisées. À sources et version de code identiques, leur
+contenu binaire est donc reproductible. La base SQLite conserve volontairement
+la date UTC de sa construction dans la table `construction`.
+
+### Vérifier les livrables
+
+Après une construction complète :
+
+```bash
+python3 scripts/check_database.py --require-sqlite
+```
+
+Dans une copie du dépôt ne contenant pas la base SQLite de la Release :
+
+```bash
+python3 scripts/check_database.py
+```
+
+Le contrôle vérifie les empreintes, l'ouverture des exports compressés,
+l'intégrité SQLite, les clés étrangères, la version et les principaux
+effectifs. Le même contrôle est lancé automatiquement à chaque modification du
+dépôt par GitHub Actions.
 
 ## Utilisation dans R
 
@@ -100,10 +162,27 @@ SQLite complète est distribuée séparément comme fichier joint à chaque vers
 publiée dans la rubrique *Releases* de GitHub. Cette séparation évite de placer
 un fichier binaire de plus d'un gigaoctet dans l'historique Git.
 
+Chaque Release accompagne la base compressée d'un fichier `SHA256SUMS.txt`.
+Ces deux fichiers sont produits après validation de la base avec :
+
+```bash
+python3 scripts/package_release.py
+```
+
+Après téléchargement, leur intégrité peut être vérifiée avec :
+
+```bash
+shasum -a 256 -c SHA256SUMS.txt
+```
+
 ## Mise à jour
 
 1. Télécharger les quatre fichiers BAAC du nouveau millésime depuis la page officielle.
 2. Les placer dans `data/raw/baac` avec les noms `caracteristiques_AAAA.csv`, `lieux_AAAA.csv`, `vehicules_AAAA.csv` et `usagers_AAAA.csv`.
-3. Mettre à jour la plage `YEARS` et les métadonnées de version dans le script.
+3. Mettre à jour `YEARS`, `VERSION` et les métadonnées de millésime dans le script.
 4. Remplacer l'inventaire radar courant, sans écraser l'archive 2018.
-5. Reconstruire la base, examiner `rapport_qualite.csv`, puis publier les nouvelles empreintes SHA-256.
+5. Mettre à jour explicitement le manifeste des sources après vérification du
+   nouveau millésime.
+6. Reconstruire la base, examiner `rapport_qualite.csv`, lancer
+   `scripts/check_database.py --require-sqlite`, puis publier les nouvelles
+   empreintes SHA-256.
