@@ -78,6 +78,15 @@ radars_historique_2018,table,route,TEXT,0,0
 radars_historique_2018,table,longueur_troncon_km,REAL,0,0
 radars_historique_2018,table,vitesse_poids_lourds_kmh,INTEGER,0,0
 radars_historique_2018,table,vitesse_vehicules_legers_kmh,INTEGER,0,0
+radars_inventaires_officiels,table,millesime,TEXT,1,1
+radars_inventaires_officiels,table,date_publication,TEXT,1,0
+radars_inventaires_officiels,table,id_radar_officiel,TEXT,1,2
+radars_inventaires_officiels,table,type_radar_code,TEXT,0,0
+radars_inventaires_officiels,table,date_mise_en_service,TEXT,0,0
+radars_inventaires_officiels,table,vma_kmh,INTEGER,0,0
+radars_inventaires_officiels,table,latitude,REAL,0,0
+radars_inventaires_officiels,table,longitude,REAL,0,0
+radars_inventaires_officiels,table,source_fichier,TEXT,1,0
 sources,table,source_id,TEXT,0,1
 sources,table,producteur,TEXT,1,0
 sources,table,titre,TEXT,1,0

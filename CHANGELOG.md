@@ -1,5 +1,13 @@
 # Historique des versions
 
+## 1.1.0 - 2026-10-11
+
+- Ajout de l'inventaire officiel des radars publié le 18 octobre 2024.
+- Création d'une table longitudinale des inventaires officiels 2024 et 2025.
+- Identification de 3 174 radars communs, 94 sorties de liste et 135 entrées entre
+  les deux millésimes, sans assimiler automatiquement les sorties à des fermetures.
+- Ajout d'un export CSV dédié et de contrôles de cohérence inter-millésimes.
+
 ## 1.0.0 - 2026-10-11
 
 - Première version publique de la base harmonisée BAAC 2005-2024.

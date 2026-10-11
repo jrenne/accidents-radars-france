@@ -19,8 +19,11 @@ MANIFEST_PATH = PACKAGE_DIR / "metadata" / "sha256.txt"
 QUALITY_PATH = PACKAGE_DIR / "metadata" / "rapport_qualite.csv"
 SOURCE_MANIFEST_PATH = PACKAGE_DIR / "metadata" / "fichiers_sources_sha256.csv"
 SCHEMA_PATH = PACKAGE_DIR / "metadata" / "schema.csv"
-EXPECTED_VERSION = "1.0.0"
-COUNTED_TABLES = ("accidents", "lieux", "vehicules", "usagers", "radars")
+EXPECTED_VERSION = "1.1.0"
+COUNTED_TABLES = (
+    "accidents", "lieux", "vehicules", "usagers", "radars",
+    "radars_inventaires_officiels",
+)
 
 GZIP_EXPORTS = {
     "data/processed/accidents.csv.gz": "id_accident",
@@ -28,6 +31,7 @@ GZIP_EXPORTS = {
     "data/processed/vehicules.csv.gz": "cle_vehicule",
     "data/processed/usagers.csv.gz": "cle_usager",
     "data/processed/radars.csv.gz": "cle_radar",
+    "data/processed/radars_inventaires.csv.gz": "millesime",
     "data/processed/qualite_par_annee.csv.gz": "annee",
     "data/teaching/accidents_extrait_pedagogique.csv.gz": "id_accident",
 }
@@ -83,6 +87,7 @@ def check_available_sources(errors):
             errors.append(f"Empreinte de source incorrecte : {row['fichier']}")
     for relative_path in (
         "data/raw/radars/radars_2018.csv",
+        "data/raw/radars/radars_fixes_2024-10.csv",
         "data/raw/radars/radars_fixes_2025-12.csv",
     ):
         if not (PACKAGE_DIR / relative_path).is_file():

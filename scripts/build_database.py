@@ -26,13 +26,14 @@ from pathlib import Path
 PACKAGE_DIR = Path(__file__).resolve().parents[1]
 RAW_BAAC_DIR = PACKAGE_DIR / "data" / "raw" / "baac"
 LEGACY_RADAR_FILE = PACKAGE_DIR / "data" / "raw" / "radars" / "radars_2018.csv"
+RADAR_2024_FILE = PACKAGE_DIR / "data" / "raw" / "radars" / "radars_fixes_2024-10.csv"
 CURRENT_RADAR_FILE = PACKAGE_DIR / "data" / "raw" / "radars" / "radars_fixes_2025-12.csv"
 OUTPUT_DIR = PACKAGE_DIR / "data" / "processed"
 TEACHING_DIR = PACKAGE_DIR / "data" / "teaching"
 METADATA_DIR = PACKAGE_DIR / "metadata"
 DB_PATH = OUTPUT_DIR / "accidents_radars_france_2005_2025.sqlite"
 YEARS = range(2005, 2025)
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 MISSING_TEXT = {"", "NA", "N/A", "NULL", "NONE", "."}
 WS_RE = re.compile(r"[\s\u00a0\u202f]+")
@@ -50,6 +51,15 @@ def clean_text(value):
 def compact_identifier(value):
     value = clean_text(value)
     return WS_RE.sub("", value) if value is not None else None
+
+
+def official_radar_identifier(value):
+    """Normalize IDs shared by the official 2024 and 2025 inventories."""
+    value = compact_identifier(value)
+    if value is None:
+        return None
+    value = value.upper()
+    return str(int(value)) if value.isdigit() else value
 
 
 def as_int(value):
@@ -123,7 +133,7 @@ def required_source_files():
         for year in YEARS
         for kind in ("caracteristiques", "lieux", "vehicules", "usagers")
     ]
-    return files + [LEGACY_RADAR_FILE, CURRENT_RADAR_FILE]
+    return files + [LEGACY_RADAR_FILE, RADAR_2024_FILE, CURRENT_RADAR_FILE]
 
 
 def validate_sources():
@@ -272,6 +282,13 @@ CREATE TABLE radars_historique_2018 (
   type_radar_libelle TEXT, emplacement TEXT, route TEXT,
   longueur_troncon_km REAL, vitesse_poids_lourds_kmh INTEGER,
   vitesse_vehicules_legers_kmh INTEGER
+);
+CREATE TABLE radars_inventaires_officiels (
+  millesime TEXT NOT NULL, date_publication TEXT NOT NULL,
+  id_radar_officiel TEXT NOT NULL, type_radar_code TEXT,
+  date_mise_en_service TEXT, vma_kmh INTEGER,
+  latitude REAL, longitude REAL, source_fichier TEXT NOT NULL,
+  PRIMARY KEY (millesime, id_radar_officiel)
 );
 CREATE TABLE radars (
   cle_radar TEXT PRIMARY KEY, id_radar_2025 TEXT, id_radar_2018 TEXT,
@@ -474,22 +491,41 @@ def load_legacy_radars(conn):
     return rows
 
 
-def load_current_radars():
-    stream, reader, _, _ = open_dict_reader(CURRENT_RADAR_FILE)
+def read_official_radar_inventory(path):
+    """Read one official inventory using its normalized cross-vintage schema."""
+    stream, reader, _, _ = open_dict_reader(path)
     rows = []
     try:
         for raw in reader:
             row = source_row(raw)
             rows.append({
-                "id": compact_identifier(row.get("numero_radar")),
+                "id": official_radar_identifier(row.get("numero_radar")),
                 "type": clean_text(row.get("type_de_radar")),
-                "date": parse_date(row.get("date_de_mise_en_service"), ("%d/%m/%Y %H:%M", "%d/%m/%Y")),
+                "date": parse_date(
+                    row.get("date_de_mise_en_service"),
+                    ("%d/%m/%Y %H:%M", "%d/%m/%Y", "%Y-%m-%d"),
+                ),
                 "vma": as_int(row.get("vma")),
                 "lat": coordinate(row.get("latitude"), latitude=True),
                 "lon": coordinate(row.get("longitude"), latitude=False),
             })
     finally:
         stream.close()
+    return rows
+
+
+def load_official_radar_inventory(conn, path, vintage, publication_date):
+    rows = read_official_radar_inventory(path)
+    conn.executemany(
+        "INSERT INTO radars_inventaires_officiels VALUES (?,?,?,?,?,?,?,?,?)",
+        [
+            (
+                vintage, publication_date, row["id"], row["type"], row["date"],
+                row["vma"], row["lat"], row["lon"], path.name,
+            )
+            for row in rows
+        ],
+    )
     return rows
 
 
@@ -524,7 +560,12 @@ def match_radars(old_rows, new_rows, threshold_m=150.0):
 
 def load_radars(conn):
     old_rows = load_legacy_radars(conn)
-    new_rows = load_current_radars()
+    load_official_radar_inventory(
+        conn, RADAR_2024_FILE, "2024-10", "2024-10-18"
+    )
+    new_rows = load_official_radar_inventory(
+        conn, CURRENT_RADAR_FILE, "2025-12", "2025-12-30"
+    )
     matches, old_used = match_radars(old_rows, new_rows)
     combined = []
     for j, new in enumerate(new_rows):
@@ -567,6 +608,11 @@ def add_sources(conn):
          "Licence Ouverte / Open Licence 2.0",
          "https://www.data.gouv.fr/datasets/liste-des-radars-fixes-en-france",
          accessed, "Inventaire courant; ne constitue pas un historique complet des retraits."),
+        ("radars_2024", "Ministère de l'Intérieur / Délégation à la sécurité routière",
+         "Liste des radars fixes en France", "France, millésime publié le 18 octobre 2024",
+         "Licence Ouverte / Open Licence 2.0",
+         "https://www.data.gouv.fr/datasets/liste-des-radars-fixes-en-france",
+         accessed, "Premier inventaire officiel archivé sur data.gouv.fr; couverture temporelle déclarée jusqu'au 31 mai 2024."),
         ("radars_2018", "Antoine Augusti, source Ministère de l'Intérieur",
          "Radars automatiques", "France, export du 25 octobre 2018",
          "Licence Ouverte / Open Licence 2.0",
@@ -586,6 +632,8 @@ def add_indexes_and_views(conn):
     CREATE INDEX idx_usagers_accident ON usagers(id_accident);
     CREATE INDEX idx_usagers_vehicle ON usagers(cle_vehicule);
     CREATE INDEX idx_radars_geo ON radars(latitude, longitude);
+    CREATE INDEX idx_radars_inventaires_geo ON radars_inventaires_officiels(latitude, longitude);
+    CREATE INDEX idx_radars_inventaires_id ON radars_inventaires_officiels(id_radar_officiel);
     CREATE VIEW bilan_accidents AS
     WITH lp AS (
       SELECT * FROM lieux WHERE rang_lieu = 1
@@ -679,6 +727,7 @@ def export_outputs(conn):
         "vehicules.csv.gz": "SELECT * FROM vehicules ORDER BY id_accident, cle_vehicule",
         "usagers.csv.gz": "SELECT * FROM usagers ORDER BY id_accident, cle_usager",
         "radars.csv.gz": "SELECT * FROM radars ORDER BY cle_radar",
+        "radars_inventaires.csv.gz": "SELECT * FROM radars_inventaires_officiels ORDER BY millesime, id_radar_officiel",
         "qualite_par_annee.csv.gz": "SELECT * FROM qualite_par_annee ORDER BY annee",
     }
     for filename, query in exports.items():
@@ -689,7 +738,7 @@ def export_outputs(conn):
 
 def write_quality_report(conn):
     checks = []
-    for table in ("accidents", "lieux", "vehicules", "usagers", "radars"):
+    for table in ("accidents", "lieux", "vehicules", "usagers", "radars", "radars_inventaires_officiels"):
         checks.append((f"lignes_{table}", conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0], "information"))
     checks.extend([
         ("accidents_sans_lieu", conn.execute("SELECT COUNT(*) FROM accidents a LEFT JOIN lieux l USING(id_accident) WHERE l.id_accident IS NULL").fetchone()[0], "doit_etre_0"),
@@ -705,6 +754,11 @@ def write_quality_report(conn):
         ("radars_2018_non_retrouves_2025", conn.execute("SELECT COUNT(*) FROM radars WHERE actif_liste_2025=0 AND observe_2018=1").fetchone()[0], "information"),
         ("radars_apparies_distance_superieure_75m", conn.execute("SELECT COUNT(*) FROM radars WHERE distance_rapprochement_m>75").fetchone()[0], "a_examiner"),
         ("radars_apparies_dates_differentes", conn.execute("SELECT COUNT(*) FROM radars WHERE observe_2018=1 AND actif_liste_2025=1 AND date_mise_en_service<>date_installation_2018").fetchone()[0], "information"),
+        ("radars_inventaire_2024", conn.execute("SELECT COUNT(*) FROM radars_inventaires_officiels WHERE millesime='2024-10'").fetchone()[0], "information"),
+        ("radars_inventaire_2025", conn.execute("SELECT COUNT(*) FROM radars_inventaires_officiels WHERE millesime='2025-12'").fetchone()[0], "information"),
+        ("radars_communs_2024_2025", conn.execute("SELECT COUNT(*) FROM radars_inventaires_officiels a JOIN radars_inventaires_officiels b USING(id_radar_officiel) WHERE a.millesime='2024-10' AND b.millesime='2025-12'").fetchone()[0], "information"),
+        ("radars_sortis_entre_2024_2025", conn.execute("SELECT COUNT(*) FROM radars_inventaires_officiels a LEFT JOIN radars_inventaires_officiels b ON b.id_radar_officiel=a.id_radar_officiel AND b.millesime='2025-12' WHERE a.millesime='2024-10' AND b.id_radar_officiel IS NULL").fetchone()[0], "information"),
+        ("radars_entres_entre_2024_2025", conn.execute("SELECT COUNT(*) FROM radars_inventaires_officiels b LEFT JOIN radars_inventaires_officiels a ON a.id_radar_officiel=b.id_radar_officiel AND a.millesime='2024-10' WHERE b.millesime='2025-12' AND a.id_radar_officiel IS NULL").fetchone()[0], "information"),
     ])
     with (METADATA_DIR / "rapport_qualite.csv").open("w", encoding="utf-8", newline="") as stream:
         writer = csv.writer(stream, lineterminator="\n")
@@ -767,7 +821,11 @@ def write_raw_source_manifest():
             path = baac_path(kind, year)
             display = path.relative_to(PACKAGE_DIR)
             rows.append(("baac", year, kind, str(display), path.stat().st_size, file_sha256(path)))
-    for source_id, path in (("radars_2018", LEGACY_RADAR_FILE), ("radars_2025", CURRENT_RADAR_FILE)):
+    for source_id, path in (
+        ("radars_2018", LEGACY_RADAR_FILE),
+        ("radars_2024", RADAR_2024_FILE),
+        ("radars_2025", CURRENT_RADAR_FILE),
+    ):
         rows.append((source_id, "", "radars", str(path.relative_to(PACKAGE_DIR)), path.stat().st_size, file_sha256(path)))
     with (METADATA_DIR / "fichiers_sources_sha256.csv").open("w", encoding="utf-8", newline="") as stream:
         writer = csv.writer(stream, lineterminator="\n")
@@ -796,7 +854,7 @@ def main():
                 ("date_construction_utc", datetime.now(timezone.utc).replace(microsecond=0).isoformat()),
                 ("python", sys.version.split()[0]),
                 ("annees_baac", "2005-2024"),
-                ("millésime_radars", "2025-12"),
+                ("millésimes_radars_officiels", "2024-10,2025-12"),
                 ("seuil_appariement_radars_m", "150"),
             ])
             add_indexes_and_views(conn)

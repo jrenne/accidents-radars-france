@@ -80,4 +80,5 @@ baac,2024,lieux,data/raw/baac/lieux_2024.csv,7070795,a500a44b4efdb18f80de31c2ebd
 baac,2024,vehicules,data/raw/baac/vehicules_2024.csv,6369908,40261a1d5ac034aa6e8193a97a2f89cae31ef3492b7f3b264122d6e868daff8d
 baac,2024,usagers,data/raw/baac/usagers_2024.csv,13843733,4e05cea88d5aa04a16092335310d4a5591e11802a94aaeeff75c6697dfaab5a0
 radars_2018,,radars,data/raw/radars/radars_2018.csv,513636,76b2db8d01e71a7141a9a50f826195bff93f1a8a74573cfc810e31b0fe829187
+radars_2024,,radars,data/raw/radars/radars_fixes_2024-10.csv,141024,3b318f3d1aa1b6c26eb40b9dbfe2bad4445de84cf13a3fccd6719a70a8590599
 radars_2025,,radars,data/raw/radars/radars_fixes_2025-12.csv,169819,7ba0b36d002d6910fd6f9ba8e83379d5ea57b046366658be703bd1f074ee4803

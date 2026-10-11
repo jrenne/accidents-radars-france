@@ -38,3 +38,11 @@ radars,vma_kmh,entier,km/h,Vitesse maximale autorisée
 radars,observe_2018,booleen,0/1,Radar rapproché ou présent dans l'archive 2018
 radars,actif_liste_2025,booleen,0/1,Radar présent dans la liste officielle 2025
 radars,distance_rapprochement_m,reel,mètres,Distance entre coordonnées lors du rapprochement 2018-2025
+radars_inventaires_officiels,millesime,texte,AAAA-MM,Millésime de l'inventaire officiel
+radars_inventaires_officiels,date_publication,date,AAAA-MM-JJ,Date de publication de la ressource sur data.gouv.fr
+radars_inventaires_officiels,id_radar_officiel,texte,,Identifiant harmonisé commun aux inventaires officiels 2024 et 2025
+radars_inventaires_officiels,type_radar_code,texte,,ETF ETD ETT ETU ETVM ETFR ou ETPN
+radars_inventaires_officiels,date_mise_en_service,date,AAAA-MM-JJ,Date de mise en service déclarée dans le millésime
+radars_inventaires_officiels,vma_kmh,entier,km/h,Vitesse maximale autorisée déclarée dans le millésime
+radars_inventaires_officiels,latitude,reel,degrés WGS84,Latitude publiée dans le millésime
+radars_inventaires_officiels,longitude,reel,degrés WGS84,Longitude publiée dans le millésime

@@ -5,6 +5,6 @@ type: dataset
 authors:
   - family-names: "Renne"
     given-names: "Jean-Paul"
-version: 1.0.0
+version: 1.1.0
 date-released: 2026-10-11
 license: etalab-2.0

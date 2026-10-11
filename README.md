@@ -1,13 +1,13 @@
 # Accidents corporels et radars fixes en France
 
 Base relationnelle harmonisée destinée à la recherche et à l'enseignement.
-La version courante est **1.0.0**.
+La version courante est **1.1.0**.
 
 ## Contenu
 
 - Accidents corporels BAAC : 2005-2024.
 - Quatre niveaux d'observation préservés : accidents, lieux, véhicules et usagers.
-- Radars fixes : inventaire officiel au 30 décembre 2025.
+- Radars fixes : inventaires officiels publiés le 18 octobre 2024 et le 30 décembre 2025.
 - Archive des radars de 2018, conservée séparément et rapprochée de l'inventaire 2025 par coordonnées.
 - Un fichier SQLite, des exports CSV compressés et un extrait pédagogique déterministe.
 
@@ -23,6 +23,7 @@ La base ne reproduit pas les choix empiriques du mémoire présent dans le dossi
 | `data/processed/vehicules.csv.gz` | Un véhicule impliqué par ligne |
 | `data/processed/usagers.csv.gz` | Un usager impliqué par ligne |
 | `data/processed/radars.csv.gz` | Inventaires 2018 et 2025 rapprochés |
+| `data/processed/radars_inventaires.csv.gz` | Inventaires officiels 2024 et 2025 en format longitudinal |
 | `data/teaching/accidents_extrait_pedagogique.csv.gz` | Échantillon reproductible, au plus 2 000 accidents par année |
 | `metadata/rapport_qualite.csv` | Contrôles d'intégrité et effectifs |
 | `metadata/fichiers_sources_sha256.csv` | Inventaire et empreintes des fichiers bruts |
@@ -63,7 +64,7 @@ data/raw/baac/
 
 Les noms sont normalisés, y compris pour les sources de 2021 qui utilisent
 initialement des traits d'union et une orthographe différente. Les fichiers
-radar 2018 et 2025 nécessaires à la construction sont déjà fournis dans
+radar 2018, 2024 et 2025 nécessaires à la construction sont déjà fournis dans
 `data/raw/radars`.
 
 Les fichiers BAAC bruts, volumineux et déjà diffusés par leur producteur, ne
@@ -79,10 +80,11 @@ python3 scripts/build_database.py
 ```
 
 Avant de remplacer un livrable existant, le script vérifie la présence et
-l'empreinte SHA-256 des 82 fichiers sources. Il exécute ensuite, dans cet ordre :
+l'empreinte SHA-256 des 83 fichiers sources. Il exécute ensuite, dans cet ordre :
 
 1. l'harmonisation des quatre tables BAAC ;
-2. le chargement et le rapprochement géographique des radars 2018 et 2025 ;
+2. le chargement des inventaires officiels 2024 et 2025, puis le rapprochement
+   géographique de l'archive 2018 avec l'inventaire 2025 ;
 3. la création des index et des vues SQLite ;
 4. l'export des CSV compressés et de l'extrait pédagogique ;
 5. les contrôles qualité, le schéma exhaustif et les manifestes d'empreintes.
@@ -138,7 +140,7 @@ dbDisconnect(con)
 - À partir de 2021, des usagers en fuite ont été ajoutés ; leur sexe, leur âge et parfois leur gravité peuvent manquer.
 - Les fichiers BAAC sont des données brutes non corrigées de toutes les erreurs de saisie.
 - Les millésimes `lieux` 2023 et 2024 ne respectent pas toujours la relation attendue d'une ligne par accident. Ne pas agréger ces fichiers sans tenir compte de `rang_lieu` ou de `nombre_lieux`.
-- La liste de radars 2025 est un état courant, pas un historique des retraits. Un radar présent en 2018 mais non retrouvé en 2025 ne doit pas être déclaré « fermé » sans source supplémentaire.
+- Les listes de radars 2024 et 2025 constituent deux états successifs, pas un historique complet. Une disparition entre ces deux millésimes est documentée comme une sortie de liste, sans être assimilée automatiquement à une fermeture définitive.
 - Les identifiants radar de 2018 et de 2025 ne coïncident pas. L'appariement géographique est effectué à moins de 150 mètres et la distance est conservée dans `distance_rapprochement_m`.
 - Un rapprochement géographique n'établit pas qu'il s'agit du même appareil physique : un équipement peut avoir été remplacé au même emplacement. Les deux dates sont conservées et les divergences ne sont pas corrigées automatiquement.
 - Pour une analyse spatiale, utiliser une distance géodésique ou une projection adaptée. Ne pas appliquer une distance euclidienne directement aux degrés de latitude et longitude.
@@ -180,7 +182,7 @@ shasum -a 256 -c SHA256SUMS.txt
 1. Télécharger les quatre fichiers BAAC du nouveau millésime depuis la page officielle.
 2. Les placer dans `data/raw/baac` avec les noms `caracteristiques_AAAA.csv`, `lieux_AAAA.csv`, `vehicules_AAAA.csv` et `usagers_AAAA.csv`.
 3. Mettre à jour `YEARS`, `VERSION` et les métadonnées de millésime dans le script.
-4. Remplacer l'inventaire radar courant, sans écraser l'archive 2018.
+4. Ajouter le nouvel inventaire radar comme un millésime distinct, sans écraser les archives antérieures.
 5. Mettre à jour explicitement le manifeste des sources après vérification du
    nouveau millésime.
 6. Reconstruire la base, examiner `rapport_qualite.csv`, lancer

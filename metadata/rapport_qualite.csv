@@ -4,6 +4,7 @@ lignes_lieux,1317981,information
 lignes_vehicules,2195658,information
 lignes_usagers,2887258,information
 lignes_radars,3956,information
+lignes_radars_inventaires_officiels,6577,information
 accidents_sans_lieu,0,doit_etre_0
 lieux_sans_accident,0,doit_etre_0
 accidents_plusieurs_lieux,31515,information
@@ -17,3 +18,8 @@ radars_2025_non_apparies,606,information
 radars_2018_non_retrouves_2025,647,information
 radars_apparies_distance_superieure_75m,150,a_examiner
 radars_apparies_dates_differentes,1191,information
+radars_inventaire_2024,3268,information
+radars_inventaire_2025,3309,information
+radars_communs_2024_2025,3174,information
+radars_sortis_entre_2024_2025,94,information
+radars_entres_entre_2024_2025,135,information
