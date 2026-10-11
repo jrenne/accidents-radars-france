@@ -1,0 +1,27 @@
+variable,code,libelle
+agglomeration,1,Hors agglomération
+agglomeration,2,En agglomération
+gravite,1,Indemne
+gravite,2,Tué dans les trente jours
+gravite,3,Blessé hospitalisé plus de 24 heures
+gravite,4,Blessé léger
+categorie_usager,1,Conducteur
+categorie_usager,2,Passager
+categorie_usager,3,Piéton
+sexe,1,Masculin
+sexe,2,Féminin
+categorie_route,1,Autoroute
+categorie_route,2,Route nationale
+categorie_route,3,Route départementale
+categorie_route,4,Voie communale
+categorie_route,5,Hors réseau public
+categorie_route,6,Parc de stationnement ouvert à la circulation publique
+categorie_route,7,Route de métropole urbaine
+categorie_route,9,Autre
+type_radar_code,ETF,Radar vitesse fixe classique
+type_radar_code,ETD,Radar vitesse fixe discriminant
+type_radar_code,ETT,Radar vitesse fixe de nouvelle génération
+type_radar_code,ETU,Radar fixe de nouvelle génération en milieu urbain
+type_radar_code,ETVM,Radar vitesse moyenne
+type_radar_code,ETFR,Radar de franchissement de feu rouge
+type_radar_code,ETPN,Radar de passage à niveau

@@ -1,0 +1,18 @@
+# Base complète distribuée dans les GitHub Releases.
+data/processed/*.sqlite
+data/processed/*.sqlite-shm
+data/processed/*.sqlite-wal
+
+# Fichiers prêts à joindre manuellement aux versions GitHub.
+release/
+
+# Les fichiers BAAC bruts sont disponibles auprès du producteur.
+data/raw/baac/
+
+# Fichiers temporaires locaux.
+__pycache__/
+*.py[cod]
+.DS_Store
+.Rhistory
+.RData
+.Rproj.user/

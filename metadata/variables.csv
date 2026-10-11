@@ -1,0 +1,40 @@
+table,variable,type,unite,description
+accidents,id_accident,texte,,Identifiant BAAC de l'accident
+accidents,annee,entier,année,Année de l'accident
+accidents,date_accident,date,AAAA-MM-JJ,Date civile reconstruite à partir des champs BAAC
+accidents,heure_accident,texte,HH:MM,Heure harmonisée
+accidents,luminosite,entier,code BAAC,Conditions d'éclairage
+accidents,agglomeration,entier,code BAAC,Localisation hors ou en agglomération
+accidents,intersection,entier,code BAAC,Type d'intersection
+accidents,conditions_atmospheriques,entier,code BAAC,Conditions atmosphériques
+accidents,type_collision,entier,code BAAC,Type de collision
+accidents,code_departement,texte,code INSEE,Département de l'accident
+accidents,code_commune,texte,code INSEE,Commune harmonisée
+accidents,latitude,reel,degrés WGS84,Latitude telle que fournie après conversion de format
+accidents,longitude,reel,degrés WGS84,Longitude telle que fournie après conversion de format
+accidents,geolocalisation_valide,booleen,0/1,Latitude et longitude numériques non nulles
+lieux,cle_lieu,texte,,Clé interne combinant accident et rang de ligne
+lieux,rang_lieu,entier,,Ordre de la ligne de lieu dans le fichier source
+lieux,categorie_route,entier,code BAAC,Catégorie de route
+lieux,regime_circulation,entier,code BAAC,Régime de circulation
+lieux,nombre_voies,entier,voies,Nombre total de voies
+lieux,vitesse_maximale_autorisee_kmh,entier,km/h,Vitesse maximale autorisée au lieu et au moment de l'accident
+vehicules,cle_vehicule,texte,,Clé interne déterministe de jointure
+vehicules,id_vehicule_source,texte,,Identifiant BAAC du véhicule lorsqu'il existe
+vehicules,categorie_vehicule,entier,code BAAC,Catégorie administrative du véhicule
+vehicules,type_motorisation,entier,code BAAC,Type de motorisation disponible depuis 2019
+usagers,cle_usager,texte,,Clé interne déterministe de l'usager
+usagers,id_usager_source,texte,,Identifiant BAAC de l'usager lorsqu'il existe
+usagers,categorie_usager,entier,code BAAC,Conducteur passager ou piéton
+usagers,gravite,entier,code BAAC,Indemne tué blessé hospitalisé ou blessé léger
+usagers,sexe,entier,code BAAC,Sexe déclaré dans le BAAC
+usagers,annee_naissance,entier,année,Année de naissance déclarée
+radars,cle_radar,texte,,Clé interne distinguant les inventaires
+radars,id_radar_2025,texte,,Identifiant du Ministère de l'Intérieur dans l'inventaire 2025
+radars,id_radar_2018,texte,,Identifiant de l'archive 2018
+radars,date_mise_en_service,date,AAAA-MM-JJ,Date de mise en service dans l'inventaire 2025
+radars,type_radar_code,texte,,ETF ETD ETT ETU ETVM ETFR ou ETPN
+radars,vma_kmh,entier,km/h,Vitesse maximale autorisée
+radars,observe_2018,booleen,0/1,Radar rapproché ou présent dans l'archive 2018
+radars,actif_liste_2025,booleen,0/1,Radar présent dans la liste officielle 2025
+radars,distance_rapprochement_m,reel,mètres,Distance entre coordonnées lors du rapprochement 2018-2025

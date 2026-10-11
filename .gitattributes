@@ -1,0 +1,13 @@
+# Conserver octet pour octet les fichiers sources officiels.
+data/raw/radars/*.csv -text -diff
+
+# Fichiers binaires.
+*.gz binary
+*.pdf binary
+
+# Fichiers texte produits par le projet.
+*.md text eol=lf
+*.py text eol=lf
+*.R text eol=lf
+metadata/*.csv text eol=lf
+metadata/*.txt text eol=lf

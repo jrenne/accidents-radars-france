@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "Si vous utilisez cette base, merci de citer cette version et les producteurs des données indiqués dans metadata/sources.csv."
+title: "Accidents corporels et radars fixes en France"
+type: dataset
+authors:
+  - family-names: "Renne"
+    given-names: "Jean-Paul"
+version: 1.0.0
+date-released: 2026-10-11
+license: etalab-2.0
