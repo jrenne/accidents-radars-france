@@ -33,7 +33,7 @@ GZIP_EXPORTS = {
     "data/processed/radars.csv.gz": "cle_radar",
     "data/processed/radars_inventaires.csv.gz": "millesime",
     "data/processed/qualite_par_annee.csv.gz": "annee",
-    "data/teaching/accidents_extrait_pedagogique.csv.gz": "id_accident",
+    "data/sample/accidents_echantillon.csv.gz": "id_accident",
 }
 
 

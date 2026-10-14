@@ -29,6 +29,6 @@
 - Ajout des millésimes BAAC 2022, 2023 et 2024 depuis data.gouv.fr.
 - Ajout de la liste officielle des radars fixes au 30 décembre 2025.
 - Conservation de l'archive radar 2018 et rapprochement géographique à 150 mètres.
-- Création de la base SQLite, des CSV compressés et de l'extrait pédagogique.
+- Création de la base SQLite, des CSV compressés et d'un échantillon allégé.
 - Conservation des lignes multiples des fichiers `lieux` 2023 et 2024.
 - Ajout des contrôles d'intégrité, de la documentation et des empreintes SHA-256.

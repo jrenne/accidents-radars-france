@@ -4,7 +4,7 @@
 
 The script uses only the Python standard library. It preserves the four-table
 BAAC structure, creates a documented SQLite database, exports compressed CSV
-tables and produces a deterministic teaching extract.
+tables and produces a deterministic lightweight sample.
 """
 
 from __future__ import annotations
@@ -29,11 +29,12 @@ LEGACY_RADAR_FILE = PACKAGE_DIR / "data" / "raw" / "radars" / "radars_2018.csv"
 RADAR_2024_FILE = PACKAGE_DIR / "data" / "raw" / "radars" / "radars_fixes_2024-10.csv"
 CURRENT_RADAR_FILE = PACKAGE_DIR / "data" / "raw" / "radars" / "radars_fixes_2025-12.csv"
 OUTPUT_DIR = PACKAGE_DIR / "data" / "processed"
-TEACHING_DIR = PACKAGE_DIR / "data" / "teaching"
+SAMPLE_DIR = PACKAGE_DIR / "data" / "sample"
 METADATA_DIR = PACKAGE_DIR / "metadata"
 DB_PATH = OUTPUT_DIR / "accidents_radars_france_2005_2025.sqlite"
 YEARS = range(2005, 2025)
 VERSION = "1.1.0"
+SAMPLE_PER_YEAR = 2000
 
 MISSING_TEXT = {"", "NA", "N/A", "NULL", "NONE", "."}
 WS_RE = re.compile(r"[\s\u00a0\u202f]+")
@@ -697,12 +698,12 @@ def write_csv_gz(conn, query, path):
             writer.writerows(rows)
 
 
-def teaching_score(accident_id):
+def sampling_score(accident_id):
     return int(hashlib.sha256(accident_id.encode("utf-8")).hexdigest()[:16], 16)
 
 
-def export_teaching_extract(conn, per_year=2000):
-    output = TEACHING_DIR / "accidents_extrait_pedagogique.csv.gz"
+def export_sample(conn, per_year=SAMPLE_PER_YEAR):
+    output = SAMPLE_DIR / "accidents_echantillon.csv.gz"
     fields = [
         "id_accident", "annee", "date_accident", "heure_accident", "code_departement",
         "code_commune", "agglomeration", "latitude", "longitude", "geolocalisation_valide",
@@ -716,7 +717,7 @@ def export_teaching_extract(conn, per_year=2000):
             rows = list(conn.execute(
                 "SELECT " + ",".join(fields) + " FROM bilan_accidents WHERE annee=?", (year,)
             ))
-            rows.sort(key=lambda row: teaching_score(row[0]))
+            rows.sort(key=lambda row: sampling_score(row[0]))
             writer.writerows(rows[:per_year])
 
 
@@ -733,7 +734,7 @@ def export_outputs(conn):
     for filename, query in exports.items():
         print(f"Export {filename}", flush=True)
         write_csv_gz(conn, query, OUTPUT_DIR / filename)
-    export_teaching_extract(conn)
+    export_sample(conn)
 
 
 def write_quality_report(conn):
@@ -836,7 +837,7 @@ def write_raw_source_manifest():
 def main():
     validate_sources()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    TEACHING_DIR.mkdir(parents=True, exist_ok=True)
+    SAMPLE_DIR.mkdir(parents=True, exist_ok=True)
     METADATA_DIR.mkdir(parents=True, exist_ok=True)
     if DB_PATH.exists():
         DB_PATH.unlink()

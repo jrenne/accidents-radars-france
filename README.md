@@ -1,6 +1,6 @@
 # Accidents corporels et radars fixes en France
 
-Base relationnelle harmonisée destinée à la recherche et à l'enseignement.
+Base relationnelle harmonisée destinée à la recherche.
 La version courante est **1.1.0**.
 
 ## Contenu
@@ -9,7 +9,7 @@ La version courante est **1.1.0**.
 - Quatre niveaux d'observation préservés : accidents, lieux, véhicules et usagers.
 - Radars fixes : inventaires officiels publiés le 18 octobre 2024 et le 30 décembre 2025.
 - Archive des radars de 2018, conservée séparément et rapprochée de l'inventaire 2025 par coordonnées.
-- Un fichier SQLite, des exports CSV compressés et un extrait pédagogique déterministe.
+- Un fichier SQLite, des exports CSV compressés et un échantillon allégé déterministe.
 
 La base ne reproduit pas les choix empiriques du mémoire présent dans le dossier. Elle constitue une infrastructure générale. Les panels radar × année × rayon doivent être construits comme produits dérivés documentés.
 
@@ -24,7 +24,7 @@ La base ne reproduit pas les choix empiriques du mémoire présent dans le dossi
 | `data/processed/usagers.csv.gz` | Un usager impliqué par ligne |
 | `data/processed/radars.csv.gz` | Inventaires 2018 et 2025 rapprochés |
 | `data/processed/radars_inventaires.csv.gz` | Inventaires officiels 2024 et 2025 en format longitudinal |
-| `data/teaching/accidents_extrait_pedagogique.csv.gz` | Échantillon reproductible, au plus 2 000 accidents par année |
+| `data/sample/accidents_echantillon.csv.gz` | Échantillon reproductible, au plus 2 000 accidents par année |
 | `metadata/rapport_qualite.csv` | Contrôles d'intégrité et effectifs |
 | `metadata/fichiers_sources_sha256.csv` | Inventaire et empreintes des fichiers bruts |
 | `metadata/schema.csv` | Schéma exhaustif des tables et des vues |
@@ -86,7 +86,7 @@ l'empreinte SHA-256 des 83 fichiers sources. Il exécute ensuite, dans cet ordre
 2. le chargement des inventaires officiels 2024 et 2025, puis le rapprochement
    géographique de l'archive 2018 avec l'inventaire 2025 ;
 3. la création des index et des vues SQLite ;
-4. l'export des CSV compressés et de l'extrait pédagogique ;
+4. l'export des CSV compressés et de l'échantillon allégé ;
 5. les contrôles qualité, le schéma exhaustif et les manifestes d'empreintes.
 
 Les CSV compressés sont produits avec des en-têtes gzip déterministes et des
@@ -181,7 +181,7 @@ La Release `v1.1.0` fournit aussi
 `accidents_radars_replication_inputs-v1.1.0.tar.gz`. Cette archive séparée
 contient les instantanés routiers et de trafic ainsi que les entrées spatiales
 dérivées nécessaires au paquet de réplication de l'article. Ces fichiers ne
-sont pas requis pour utiliser la base ou l'extrait pédagogique. L'archive est
+sont pas requis pour utiliser la base ou l'échantillon allégé. L'archive est
 reconstruite depuis le dossier de recherche avec :
 
 ```bash
