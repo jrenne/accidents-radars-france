@@ -177,6 +177,19 @@ Après téléchargement, leur intégrité peut être vérifiée avec :
 shasum -a 256 -c SHA256SUMS.txt
 ```
 
+La Release `v1.1.0` fournit aussi
+`accidents_radars_replication_inputs-v1.1.0.tar.gz`. Cette archive séparée
+contient les instantanés routiers et de trafic ainsi que les entrées spatiales
+dérivées nécessaires au paquet de réplication de l'article. Ces fichiers ne
+sont pas requis pour utiliser la base ou l'extrait pédagogique. L'archive est
+reconstruite depuis le dossier de recherche avec :
+
+```bash
+python3 scripts/package_replication_inputs.py --analysis-root /chemin/vers/Accidents
+```
+
+Son empreinte est écrite dans `release/REPLICATION_INPUTS_SHA256.txt`.
+
 ## Mise à jour
 
 1. Télécharger les quatre fichiers BAAC du nouveau millésime depuis la page officielle.

@@ -7,6 +7,9 @@
 - Identification de 3 174 radars communs, 94 sorties de liste et 135 entrées entre
   les deux millésimes, sans assimiler automatiquement les sorties à des fermetures.
 - Ajout d'un export CSV dédié et de contrôles de cohérence inter-millésimes.
+- Ajout d'un constructeur d'archive pour les entrées auxiliaires figées du
+  paquet de réplication (routes IGN, trafic, fonds cartographiques et comptes
+  spatiaux dérivés), distribuées comme actif de Release plutôt que dans Git.
 
 ## 1.0.0 - 2026-10-11
 
