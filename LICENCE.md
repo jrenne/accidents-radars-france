@@ -9,9 +9,8 @@ Ce paquet emploie deux licences distinctes :
   texte complet figure dans [`LICENSE-CODE.md`](LICENSE-CODE.md).
 
 La Licence Ouverte 2.0 ne remplace pas les licences ou droits applicables aux
-documents et fichiers provenant de tiers. Le mémoire de master situé à la
-racine du dossier de travail n'appartient pas à ce paquet redistribuable et
-n'est couvert par aucune des deux licences ci-dessus.
+documents et fichiers provenant de tiers, qui conservent leurs conditions
+propres.
 
 ## Données BAAC
 
@@ -67,6 +66,18 @@ Licence de la source : Licence Ouverte / Open Licence 2.0.
 Attribution recommandée : « Source : Ministère de la Transition écologique,
 trafic moyen journalier annuel sur le réseau routier national, millésimes
 2011--2019, Licence Ouverte 2.0. »
+
+## Centroïdes et population des communes
+
+Producteur : OpenDataSoft, à partir notamment de GEOFLA 2013 (IGN).
+
+Produit : `Correspondance Code INSEE - Code Postal 2013`, utilisé comme entrée
+auxiliaire pour les centroïdes et la population des communes.
+
+Licence de la source : Licence Ouverte / Open Licence 1.0.
+
+Attribution recommandée : « Source : OpenDataSoft, Correspondance Code INSEE -
+Code Postal 2013, Licence Ouverte 1.0. »
 
 ## Code du projet
 

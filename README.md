@@ -1,119 +1,32 @@
 # Accidents corporels et radars fixes en France
 
-Base relationnelle harmonisée destinée à la recherche.
-La version courante est **1.1.0**.
+Base relationnelle harmonisée des accidents corporels de la circulation et des
+radars fixes en France. La version courante est **1.1.0**.
 
-## Contenu
+Le dépôt fournit une infrastructure de données générale : il conserve les
+niveaux d'observation et les variables sources sans imposer les choix
+d'échantillon, de distance ou d'estimation d'une étude particulière. Le code
+et les données dérivées de l'article sur les radars fixes sont distribués dans
+le dépôt séparé
+[`jrenne/accidents-radars-replication`](https://github.com/jrenne/accidents-radars-replication).
 
-- Accidents corporels BAAC : 2005-2024.
-- Quatre niveaux d'observation préservés : accidents, lieux, véhicules et usagers.
-- Radars fixes : inventaires officiels publiés le 18 octobre 2024 et le 30 décembre 2025.
-- Archive des radars de 2018, conservée séparément et rapprochée de l'inventaire 2025 par coordonnées.
-- Un fichier SQLite, des exports CSV compressés et un échantillon allégé déterministe.
+## Démarrage rapide
 
-La base ne reproduit pas les choix empiriques du mémoire présent dans le dossier. Elle constitue une infrastructure générale. Les panels radar × année × rayon doivent être construits comme produits dérivés documentés.
+Les exports CSV compressés sont directement versionnés dans `data/processed/`.
+La base SQLite complète est jointe à la
+[Release correspondante](https://github.com/jrenne/accidents-radars-france/releases)
+afin de ne pas alourdir l'historique Git. Un échantillon déterministe limité à
+2 000 accidents par année est disponible dans
+`data/sample/accidents_echantillon.csv.gz` pour une prise en main rapide.
 
-## Fichiers produits
+En R, un export peut être lu sans décompression préalable :
 
-| Fichier | Rôle |
-| --- | --- |
-| `data/processed/accidents_radars_france_2005_2025.sqlite` | Base complète et vues prêtes à interroger |
-| `data/processed/accidents.csv.gz` | Un accident par ligne |
-| `data/processed/lieux.csv.gz` | Un enregistrement de lieu par accident |
-| `data/processed/vehicules.csv.gz` | Un véhicule impliqué par ligne |
-| `data/processed/usagers.csv.gz` | Un usager impliqué par ligne |
-| `data/processed/radars.csv.gz` | Inventaires 2018 et 2025 rapprochés |
-| `data/processed/radars_inventaires.csv.gz` | Inventaires officiels 2024 et 2025 en format longitudinal |
-| `data/sample/accidents_echantillon.csv.gz` | Échantillon reproductible, au plus 2 000 accidents par année |
-| `metadata/rapport_qualite.csv` | Contrôles d'intégrité et effectifs |
-| `metadata/fichiers_sources_sha256.csv` | Inventaire et empreintes des fichiers bruts |
-| `metadata/schema.csv` | Schéma exhaustif des tables et des vues |
-| `metadata/variables.csv` | Dictionnaire commenté des variables principales |
-| `metadata/sha256.txt` | Empreintes des fichiers versionnés dans le dépôt |
-
-## Schéma relationnel
-
-`id_accident` relie `accidents`, `lieux`, `vehicules` et `usagers`. `cle_vehicule` relie les véhicules aux usagers. Les identifiants absents avant 2019 sont reconstruits de façon déterministe à partir de l'accident et du numéro de véhicule ; ils servent à la jointure interne et ne sont pas des identifiants administratifs. Les fichiers officiels des lieux 2023 et 2024 contiennent plusieurs lignes pour de nombreux accidents. Elles sont toutes conservées avec `rang_lieu`; les vues synthétiques utilisent la première ligne et exposent `nombre_lieux`.
-
-La vue SQLite `bilan_accidents` fournit une ligne par accident avec le nombre de véhicules, d'usagers, de tués et de blessés. La vue `qualite_par_annee` décrit notamment la couverture géographique.
-
-## Construire la base
-
-### Prérequis
-
-- Python 3.9 ou une version ultérieure ;
-- environ 3 Go d'espace libre pendant la construction ;
-- les fichiers BAAC bruts décrits ci-dessous.
-
-Le constructeur n'utilise aucun paquet Python externe.
-
-### Préparer les sources
-
-Télécharger les fichiers BAAC depuis la [page officielle de
-data.gouv.fr](https://www.data.gouv.fr/datasets/bases-de-donnees-annuelles-des-accidents-corporels-de-la-circulation-routiere-annees-de-2005-a-2024).
-Pour chaque année de 2005 à 2024, placer les quatre tables dans
-`data/raw/baac` en appliquant exactement les noms suivants :
-
-```text
-data/raw/baac/
-├── caracteristiques_AAAA.csv
-├── lieux_AAAA.csv
-├── vehicules_AAAA.csv
-└── usagers_AAAA.csv
+```r
+accidents <- read.csv("data/processed/accidents.csv.gz")
+radars <- read.csv("data/processed/radars.csv.gz")
 ```
 
-Les noms sont normalisés, y compris pour les sources de 2021 qui utilisent
-initialement des traits d'union et une orthographe différente. Les fichiers
-radar 2018, 2024 et 2025 nécessaires à la construction sont déjà fournis dans
-`data/raw/radars`.
-
-Les fichiers BAAC bruts, volumineux et déjà diffusés par leur producteur, ne
-sont pas versionnés dans ce dépôt. Leur taille et leur empreinte attendue sont
-consignées dans `metadata/fichiers_sources_sha256.csv`.
-
-### Lancer la construction
-
-Depuis la racine du dépôt :
-
-```bash
-python3 scripts/build_database.py
-```
-
-Avant de remplacer un livrable existant, le script vérifie la présence et
-l'empreinte SHA-256 des 83 fichiers sources. Il exécute ensuite, dans cet ordre :
-
-1. l'harmonisation des quatre tables BAAC ;
-2. le chargement des inventaires officiels 2024 et 2025, puis le rapprochement
-   géographique de l'archive 2018 avec l'inventaire 2025 ;
-3. la création des index et des vues SQLite ;
-4. l'export des CSV compressés et de l'échantillon allégé ;
-5. les contrôles qualité, le schéma exhaustif et les manifestes d'empreintes.
-
-Les CSV compressés sont produits avec des en-têtes gzip déterministes et des
-fins de ligne normalisées. À sources et version de code identiques, leur
-contenu binaire est donc reproductible. La base SQLite conserve volontairement
-la date UTC de sa construction dans la table `construction`.
-
-### Vérifier les livrables
-
-Après une construction complète :
-
-```bash
-python3 scripts/check_database.py --require-sqlite
-```
-
-Dans une copie du dépôt ne contenant pas la base SQLite de la Release :
-
-```bash
-python3 scripts/check_database.py
-```
-
-Le contrôle vérifie les empreintes, l'ouverture des exports compressés,
-l'intégrité SQLite, les clés étrangères, la version et les principaux
-effectifs. Le même contrôle est lancé automatiquement à chaque modification du
-dépôt par GitHub Actions.
-
-## Utilisation dans R
+Pour interroger la base relationnelle :
 
 ```r
 library(DBI)
@@ -133,71 +46,187 @@ accidents_2024 <- dbGetQuery(
 dbDisconnect(con)
 ```
 
-## Précautions d'interprétation
+## Périmètre
 
-- La géolocalisation des accidents est très incomplète pour plusieurs premiers millésimes. La variable `geolocalisation_valide` et la vue `qualite_par_annee` permettent de mesurer cette couverture ; aucune coordonnée communale n'est imputée silencieusement.
-- La qualification de « blessé hospitalisé » n'est pas comparable avant et après 2018 en raison d'un changement de processus de saisie. L'indicateur n'est plus labellisé depuis 2019.
-- À partir de 2021, des usagers en fuite ont été ajoutés ; leur sexe, leur âge et parfois leur gravité peuvent manquer.
-- Les fichiers BAAC sont des données brutes non corrigées de toutes les erreurs de saisie.
-- Les millésimes `lieux` 2023 et 2024 ne respectent pas toujours la relation attendue d'une ligne par accident. Ne pas agréger ces fichiers sans tenir compte de `rang_lieu` ou de `nombre_lieux`.
-- Les listes de radars 2024 et 2025 constituent deux états successifs, pas un historique complet. Une disparition entre ces deux millésimes est documentée comme une sortie de liste, sans être assimilée automatiquement à une fermeture définitive.
-- Les identifiants radar de 2018 et de 2025 ne coïncident pas. L'appariement géographique est effectué à moins de 150 mètres et la distance est conservée dans `distance_rapprochement_m`.
-- Un rapprochement géographique n'établit pas qu'il s'agit du même appareil physique : un équipement peut avoir été remplacé au même emplacement. Les deux dates sont conservées et les divergences ne sont pas corrigées automatiquement.
-- Pour une analyse spatiale, utiliser une distance géodésique ou une projection adaptée. Ne pas appliquer une distance euclidienne directement aux degrés de latitude et longitude.
+La version 1.1.0 réunit :
 
-## Provenance et redistribution
+- les tables BAAC annuelles de 2005 à 2024 ;
+- les quatre niveaux d'observation d'origine : accidents, lieux, véhicules et
+  usagers ;
+- les inventaires officiels de radars publiés le 18 octobre 2024 et le
+  30 décembre 2025 ;
+- une archive des radars de 2018, conservée séparément puis rapprochée de
+  l'inventaire 2025 par coordonnées ;
+- des dictionnaires, rapports de qualité et empreintes permettant de vérifier
+  chaque produit.
+
+Le registre de référence des sources est
+[`metadata/sources.csv`](metadata/sources.csv). Il indique, pour chaque entrée
+utilisée par la base ou par l'archive d'entrées de réplication, le producteur,
+la couverture, la licence, l'adresse officielle et la date de consultation.
+Les empreintes des fichiers effectivement archivés sont conservées séparément
+dans `metadata/fichiers_sources_sha256.csv`.
+
+Les listes de radars sont des états successifs, pas un historique exhaustif de
+leur fonctionnement. Une disparition entre deux inventaires est enregistrée
+comme une sortie de liste et n'est pas assimilée automatiquement à une
+fermeture définitive.
+
+## Organisation des données
+
+| Couche | Produits | Fonction |
+| --- | --- | --- |
+| Sources | Tables BAAC annuelles et inventaires radar | Fichiers publics conservés avec leur provenance et leur empreinte |
+| Harmonisation | SQLite et CSV compressés | Noms, types, clés et codages rendus cohérents entre millésimes |
+| Documentation | Schéma, dictionnaire et rapport de qualité | Structure, définitions et contrôles consultables sans relancer la construction |
+| Produits dérivés | Échantillon allégé et archive de réplication | Usages spécifiques, séparés des tables harmonisées générales |
+
+### Schéma relationnel
+
+`id_accident` relie `accidents`, `lieux`, `vehicules` et `usagers`.
+`cle_vehicule` relie les véhicules aux usagers. Les identifiants de véhicule
+absents des premiers millésimes sont reconstruits de façon déterministe à
+partir de l'accident et du numéro de véhicule ; ils servent aux jointures
+internes et ne sont pas des identifiants administratifs.
+
+Les fichiers `lieux` de 2023 et 2024 comportent plusieurs lignes pour de
+nombreux accidents. Toutes sont conservées avec `rang_lieu`. Les vues
+synthétiques utilisent la première ligne et exposent `nombre_lieux`, afin que
+cette simplification reste visible.
+
+La vue SQLite `bilan_accidents` fournit une ligne par accident avec les nombres
+de véhicules, d'usagers, de tués et de blessés. La vue
+`qualite_par_annee` décrit notamment la couverture géographique.
+
+### Principaux fichiers
+
+| Fichier | Contenu |
+| --- | --- |
+| `data/processed/accidents_radars_france_2005_2025.sqlite` | Base complète, index et vues prêtes à interroger |
+| `data/processed/accidents.csv.gz` | Une ligne par accident |
+| `data/processed/lieux.csv.gz` | Une ou plusieurs lignes de lieu par accident |
+| `data/processed/vehicules.csv.gz` | Un véhicule impliqué par ligne |
+| `data/processed/usagers.csv.gz` | Un usager impliqué par ligne |
+| `data/processed/radars.csv.gz` | Archives 2018 et 2025 rapprochées |
+| `data/processed/radars_inventaires.csv.gz` | Inventaires officiels 2024 et 2025 en format longitudinal |
+| `data/processed/qualite_par_annee.csv.gz` | Principaux indicateurs annuels de couverture |
+| `data/sample/accidents_echantillon.csv.gz` | Échantillon déterministe, au plus 2 000 accidents par année |
+| `metadata/schema.csv` | Schéma exhaustif des tables et des vues |
+| `metadata/variables.csv` | Dictionnaire commenté des variables principales |
+| `metadata/rapport_qualite.csv` | Contrôles d'intégrité et effectifs |
+| `metadata/fichiers_sources_sha256.csv` | Inventaire et empreintes des sources brutes |
+| `metadata/sha256.txt` | Empreintes des fichiers publiés dans le dépôt |
+
+## Harmonisation et précautions d'interprétation
+
+Les scripts harmonisent les séparateurs, encodages, noms de colonnes et types
+qui varient selon les années, tout en conservant les codes sources. Aucune
+coordonnée communale n'est imputée silencieusement.
+
+Les principales limites à connaître sont les suivantes :
+
+- la géolocalisation des accidents est incomplète pour plusieurs premiers
+  millésimes ; `geolocalisation_valide` et `qualite_par_annee` permettent d'en
+  mesurer la couverture ;
+- la qualification de « blessé hospitalisé » n'est pas comparable avant et
+  après 2018 et n'est plus labellisée depuis 2019 ;
+- à partir de 2021, les usagers en fuite peuvent avoir des informations
+  manquantes sur le sexe, l'âge ou la gravité ;
+- les fichiers BAAC restent exposés aux erreurs de saisie présentes dans les
+  sources publiques ;
+- les identifiants radar de 2018 et de 2025 ne coïncident pas : le
+  rapprochement est géographique, à moins de 150 mètres, et sa distance est
+  conservée dans `distance_rapprochement_m` ;
+- un rapprochement géographique n'établit pas qu'il s'agit du même appareil
+  physique, car un équipement peut être remplacé au même emplacement ;
+- toute analyse spatiale doit utiliser une distance géodésique ou une
+  projection adaptée, et non une distance euclidienne appliquée directement
+  aux degrés de latitude et longitude.
+
+La base ne construit pas de panel causal radar × période × zone spatiale. Ces
+choix dépendent de la question étudiée et doivent rester des produits dérivés
+documentés.
+
+## Reproduire la base
+
+### Prérequis
+
+- Python 3.9 ou une version ultérieure ;
+- environ 3 Go d'espace libre pendant la construction ;
+- les fichiers BAAC bruts décrits ci-dessous.
+
+Le constructeur n'utilise aucun paquet Python externe.
+
+### Préparer les sources
+
+Télécharger les fichiers BAAC depuis la [page officielle de
+data.gouv.fr](https://www.data.gouv.fr/datasets/bases-de-donnees-annuelles-des-accidents-corporels-de-la-circulation-routiere-annees-de-2005-a-2024).
+Pour chaque année de 2005 à 2024, placer les quatre tables dans
+`data/raw/baac` avec les noms suivants :
+
+```text
+data/raw/baac/
+├── caracteristiques_AAAA.csv
+├── lieux_AAAA.csv
+├── vehicules_AAAA.csv
+└── usagers_AAAA.csv
+```
+
+Les fichiers radar 2018, 2024 et 2025 sont déjà fournis dans
+`data/raw/radars`. Les fichiers BAAC bruts, volumineux et déjà diffusés par leur
+producteur, ne sont pas dupliqués. Leurs noms, tailles et empreintes attendues
+figurent dans `metadata/fichiers_sources_sha256.csv`.
+
+### Construire et vérifier
+
+Depuis la racine du dépôt :
+
+```bash
+python3 scripts/build_database.py
+python3 scripts/check_database.py --require-sqlite
+```
+
+Le constructeur vérifie les 83 fichiers sources avant de remplacer un
+livrable. Il harmonise les quatre tables BAAC, traite les inventaires radar,
+crée les index et vues SQLite, exporte les CSV et l'échantillon allégé, puis
+produit les métadonnées de contrôle.
+
+Les CSV compressés ont des en-têtes gzip déterministes et des fins de ligne
+normalisées : à sources et code identiques, leur contenu binaire est
+reproductible. La base SQLite conserve volontairement la date UTC de sa
+construction. Le vérificateur peut aussi être exécuté sans l'option
+`--require-sqlite` dans une copie ne contenant que les fichiers versionnés.
+
+## Releases et réplication de l'article
+
+La base SQLite, compressée, est distribuée comme actif de Release avec
+`SHA256SUMS.txt`. Le script `scripts/package_release.py` prépare ces deux
+fichiers après validation.
+
+La Release `v1.1.0` fournit également
+`accidents_radars_replication_inputs-v1.1.0.tar.gz`. Cette archive contient les
+instantanés routiers et de trafic ainsi que les entrées spatiales figées dont
+le package de réplication de l'article a besoin. Elle n'est pas nécessaire pour
+utiliser la base ou l'échantillon allégé. Son empreinte figure dans
+`release/REPLICATION_INPUTS_SHA256.txt`.
+
+## Licences et citation
 
 Les données produites sont placées sous Licence Ouverte 2.0 et les scripts sous
-licence MIT. Les textes complets et les attributions à reproduire figurent dans
-`LICENSE-DATA.md`, `LICENSE-CODE.md` et `LICENCE.md`. Les sources et leurs
-licences sont détaillées dans `metadata/sources.csv`.
+licence MIT. Les textes et attributions à conserver figurent dans
+`LICENSE-DATA.md`, `LICENSE-CODE.md`, `LICENCE.md` et `metadata/sources.csv`.
+Les documents provenant de tiers conservent leurs conditions propres.
 
-Lors d'une redistribution, conserver ces quatre fichiers et indiquer le
-millésime de la base. Les documents provenant de tiers conservent leurs droits
-et conditions propres. Le mémoire de master utilisé lors des travaux
-préliminaires ne fait pas partie de ce dépôt redistribuable.
+Pour citer la base, utiliser les informations de `CITATION.cff`, préciser la
+version employée et citer les producteurs des sources indiqués dans
+`metadata/sources.csv`.
 
-## Téléchargement de la base complète
+## Mettre à jour la base
 
-Les exports CSV compressés, adaptés à R, sont versionnés dans le dépôt. La base
-SQLite complète est distribuée séparément comme fichier joint à chaque version
-publiée dans la rubrique *Releases* de GitHub. Cette séparation évite de placer
-un fichier binaire de plus d'un gigaoctet dans l'historique Git.
-
-Chaque Release accompagne la base compressée d'un fichier `SHA256SUMS.txt`.
-Ces deux fichiers sont produits après validation de la base avec :
-
-```bash
-python3 scripts/package_release.py
-```
-
-Après téléchargement, leur intégrité peut être vérifiée avec :
-
-```bash
-shasum -a 256 -c SHA256SUMS.txt
-```
-
-La Release `v1.1.0` fournit aussi
-`accidents_radars_replication_inputs-v1.1.0.tar.gz`. Cette archive séparée
-contient les instantanés routiers et de trafic ainsi que les entrées spatiales
-dérivées nécessaires au paquet de réplication de l'article. Ces fichiers ne
-sont pas requis pour utiliser la base ou l'échantillon allégé. L'archive est
-reconstruite depuis le dossier de recherche avec :
-
-```bash
-python3 scripts/package_replication_inputs.py --analysis-root /chemin/vers/Accidents
-```
-
-Son empreinte est écrite dans `release/REPLICATION_INPUTS_SHA256.txt`.
-
-## Mise à jour
-
-1. Télécharger les quatre fichiers BAAC du nouveau millésime depuis la page officielle.
-2. Les placer dans `data/raw/baac` avec les noms `caracteristiques_AAAA.csv`, `lieux_AAAA.csv`, `vehicules_AAAA.csv` et `usagers_AAAA.csv`.
-3. Mettre à jour `YEARS`, `VERSION` et les métadonnées de millésime dans le script.
-4. Ajouter le nouvel inventaire radar comme un millésime distinct, sans écraser les archives antérieures.
-5. Mettre à jour explicitement le manifeste des sources après vérification du
-   nouveau millésime.
-6. Reconstruire la base, examiner `rapport_qualite.csv`, lancer
-   `scripts/check_database.py --require-sqlite`, puis publier les nouvelles
-   empreintes SHA-256.
+1. Ajouter les quatre tables BAAC du nouveau millésime dans `data/raw/baac`.
+2. Mettre à jour les années, la version et les métadonnées dans le constructeur.
+3. Ajouter le nouvel inventaire radar comme un millésime distinct.
+4. Mettre à jour explicitement le manifeste des sources.
+5. Reconstruire la base et examiner `metadata/rapport_qualite.csv`.
+6. Exécuter `scripts/check_database.py --require-sqlite`, puis préparer la
+   nouvelle Release et ses empreintes.
