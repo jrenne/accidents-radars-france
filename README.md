@@ -5,17 +5,19 @@ radars fixes en France. La version courante est **1.1.0**.
 
 Le dépôt fournit une infrastructure de données générale : il conserve les
 niveaux d'observation et les variables sources sans imposer les choix
-d'échantillon, de distance ou d'estimation d'une étude particulière. Le code
-et les données dérivées de l'article sur les radars fixes sont distribués dans
-le dépôt séparé
+d'échantillon, de distance ou d'estimation d'une étude particulière. Les entrées
+complémentaires nécessaires à l'article sur les radars fixes sont fournies
+séparément dans `data/replication/`. Le code de l'article se trouve dans
+le dépôt
 [`jrenne/accidents-radars-replication`](https://github.com/jrenne/accidents-radars-replication).
 
 ## Démarrage rapide
 
-Les exports CSV compressés sont directement versionnés dans `data/processed/`.
-La base SQLite complète est jointe à la
-[Release correspondante](https://github.com/jrenne/accidents-radars-france/releases)
-afin de ne pas alourdir l'historique Git. Un échantillon déterministe limité à
+Les exports CSV compressés sont directement fournis dans `data/processed/`.
+Le package de réplication utilise ces CSV et l'archive complémentaire décrite
+plus bas : aucune publication GitHub séparée (« Release ») n'est nécessaire.
+La base SQLite, plus volumineuse, peut être construite localement avec les
+scripts ci-dessous. Un échantillon déterministe limité à
 2 000 accidents par année est disponible dans
 `data/sample/accidents_echantillon.csv.gz` pour une prise en main rapide.
 
@@ -26,7 +28,7 @@ accidents <- read.csv("data/processed/accidents.csv.gz")
 radars <- read.csv("data/processed/radars.csv.gz")
 ```
 
-Pour interroger la base relationnelle :
+Après construction locale de la base SQLite, on peut l'interroger en R :
 
 ```r
 library(DBI)
@@ -102,7 +104,7 @@ de véhicules, d'usagers, de tués et de blessés. La vue
 
 | Fichier | Contenu |
 | --- | --- |
-| `data/processed/accidents_radars_france_2005_2025.sqlite` | Base complète, index et vues prêtes à interroger |
+| `data/processed/accidents_radars_france_2005_2025.sqlite` | Base complète construite localement, avec index et vues |
 | `data/processed/accidents.csv.gz` | Une ligne par accident |
 | `data/processed/lieux.csv.gz` | Une ou plusieurs lignes de lieu par accident |
 | `data/processed/vehicules.csv.gz` | Un véhicule impliqué par ligne |
@@ -111,6 +113,7 @@ de véhicules, d'usagers, de tués et de blessés. La vue
 | `data/processed/radars_inventaires.csv.gz` | Inventaires officiels 2024 et 2025 en format longitudinal |
 | `data/processed/qualite_par_annee.csv.gz` | Principaux indicateurs annuels de couverture |
 | `data/sample/accidents_echantillon.csv.gz` | Échantillon déterministe, au plus 2 000 accidents par année |
+| `data/replication/accidents_radars_replication_inputs-v1.1.0.tar.gz` | Entrées complémentaires figées pour la réplication de l'article |
 | `metadata/schema.csv` | Schéma exhaustif des tables et des vues |
 | `metadata/variables.csv` | Dictionnaire commenté des variables principales |
 | `metadata/rapport_qualite.csv` | Contrôles d'intégrité et effectifs |
@@ -197,18 +200,20 @@ reproductible. La base SQLite conserve volontairement la date UTC de sa
 construction. Le vérificateur peut aussi être exécuté sans l'option
 `--require-sqlite` dans une copie ne contenant que les fichiers versionnés.
 
-## Releases et réplication de l'article
+## Réplication de l'article
 
-La base SQLite, compressée, est distribuée comme actif de Release avec
-`SHA256SUMS.txt`. Le script `scripts/package_release.py` prépare ces deux
-fichiers après validation.
+L'[archive complémentaire](data/replication/accidents_radars_replication_inputs-v1.1.0.tar.gz)
+est fournie directement dans ce dépôt (environ 66 Mo). Elle contient les
+instantanés routiers et de trafic, le fond cartographique et les comptages
+spatiaux figés nécessaires à l'article. Elle n'est pas nécessaire pour utiliser
+les tables générales ou l'échantillon allégé. Son empreinte est indiquée dans
+[`data/replication/REPLICATION_INPUTS_SHA256.txt`](data/replication/REPLICATION_INPUTS_SHA256.txt).
 
-La Release `v1.1.0` fournit également
-`accidents_radars_replication_inputs-v1.1.0.tar.gz`. Cette archive contient les
-instantanés routiers et de trafic ainsi que les entrées spatiales figées dont
-le package de réplication de l'article a besoin. Elle n'est pas nécessaire pour
-utiliser la base ou l'échantillon allégé. Son empreinte figure dans
-`release/REPLICATION_INPUTS_SHA256.txt`.
+Le [package de réplication](https://github.com/jrenne/accidents-radars-replication)
+télécharge automatiquement les CSV et cette archive, puis vérifie leurs
+empreintes. Il n'utilise pas la base SQLite et ne dépend d'aucune Release.
+Le script `scripts/package_replication_inputs.py` permet de reconstruire
+l'archive à partir des fichiers sources archivés dans le projet de recherche.
 
 ## Licences et citation
 
@@ -228,5 +233,5 @@ version employée et citer les producteurs des sources indiqués dans
 3. Ajouter le nouvel inventaire radar comme un millésime distinct.
 4. Mettre à jour explicitement le manifeste des sources.
 5. Reconstruire la base et examiner `metadata/rapport_qualite.csv`.
-6. Exécuter `scripts/check_database.py --require-sqlite`, puis préparer la
-   nouvelle Release et ses empreintes.
+6. Exécuter `scripts/check_database.py --require-sqlite`, puis envoyer les
+   fichiers mis à jour sur GitHub avec leurs empreintes.

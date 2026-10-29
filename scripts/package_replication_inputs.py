@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Build the versioned auxiliary-input asset for the replication repository."""
+"""Build the auxiliary-input archive stored directly in the data repository."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import hashlib
 import tarfile
 from pathlib import Path
 
-from build_database import PACKAGE_DIR, VERSION
+from build_database import PACKAGE_DIR, VERSION, sha256_manifest
 
 
 ASSET_NAME = f"accidents_radars_replication_inputs-v{VERSION}.tar.gz"
@@ -82,9 +82,9 @@ def main() -> None:
         help="Root containing DATA/ and replication-master/",
     )
     args = parser.parse_args()
-    release = PACKAGE_DIR / "release"
-    release.mkdir(parents=True, exist_ok=True)
-    asset = release / ASSET_NAME
+    destination = PACKAGE_DIR / "data" / "replication"
+    destination.mkdir(parents=True, exist_ok=True)
+    asset = destination / ASSET_NAME
     with asset.open("wb") as raw:
         with gzip.GzipFile(filename="", fileobj=raw, mode="wb", mtime=0) as compressed:
             with tarfile.open(fileobj=compressed, mode="w") as archive:
@@ -94,9 +94,10 @@ def main() -> None:
                 ):
                     add_file(archive, source, destination)
     checksum = sha256(asset)
-    (release / "REPLICATION_INPUTS_SHA256.txt").write_text(
+    (destination / "REPLICATION_INPUTS_SHA256.txt").write_text(
         f"{checksum}  {asset.name}\n", encoding="utf-8"
     )
+    sha256_manifest()
     print(f"Archive créée : {asset}")
     print(f"SHA-256 : {checksum}")
 

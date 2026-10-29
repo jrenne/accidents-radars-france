@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Create the compressed SQLite asset and checksum for a GitHub Release."""
+"""Optionally compress the local SQLite database and write its checksum."""
 
 from __future__ import annotations
 

@@ -9,7 +9,7 @@
 - Ajout d'un export CSV dédié et de contrôles de cohérence inter-millésimes.
 - Ajout d'un constructeur d'archive pour les entrées auxiliaires figées du
   paquet de réplication (routes IGN, trafic, fonds cartographiques et comptes
-  spatiaux dérivés), distribuées comme actif de Release plutôt que dans Git.
+  spatiaux dérivés), fournies directement dans `data/replication/`.
 
 ## 1.0.0 - 2026-10-11
 

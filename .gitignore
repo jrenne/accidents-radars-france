@@ -1,9 +1,9 @@
-# Base complète distribuée dans les GitHub Releases.
+# Base SQLite construite localement ; les exports CSV sont versionnés.
 data/processed/*.sqlite
 data/processed/*.sqlite-shm
 data/processed/*.sqlite-wal
 
-# Fichiers prêts à joindre manuellement aux versions GitHub.
+# Anciennes archives locales, non nécessaires à la réplication.
 release/
 
 # Les fichiers BAAC bruts sont disponibles auprès du producteur.

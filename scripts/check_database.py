@@ -106,7 +106,7 @@ def expected_counts():
 def check_sqlite(errors, require_sqlite):
     if not DB_PATH.is_file():
         if require_sqlite:
-            errors.append("Base SQLite absente ; téléchargez-la depuis la Release GitHub.")
+            errors.append("Base SQLite absente ; exécutez scripts/build_database.py pour la construire.")
         return
     with sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True) as conn:
         if conn.execute("PRAGMA quick_check").fetchone()[0] != "ok":
@@ -153,7 +153,7 @@ def main():
     parser.add_argument(
         "--require-sqlite",
         action="store_true",
-        help="échouer si la base SQLite distribuée dans la Release est absente",
+        help="échouer si la base SQLite construite localement est absente",
     )
     args = parser.parse_args()
     errors = []
